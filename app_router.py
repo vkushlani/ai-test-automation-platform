@@ -20,21 +20,21 @@ def classify_question(question):
 ]):
         return "document_count"
     elif any(word in question for word in [
-    "selenium framework",
-    "cucumber framework",
-    "automation framework",
-    "generate automation framework",
-    "manual test cases to automation",
     "convert manual test cases",
-    "selenium cucumber",
+    "manual test cases to automation",
+    "manual test cases to selenium",
+    "manual test cases to selenium cucumber",
+    "generate selenium framework",
+    "generate cucumber framework",
+    "selenium cucumber framework",
     "testng framework",
-    "generate selenium",
-    "generate cucumber",
-    "selenium cucumber testng"
+    "automation framework"
 ]):
         return "automation_framework"
     
     elif any(word in question for word in [
+    "manual test cases",
+    "generate manual test cases",
     "test case",
     "testing scenarios",
     "generate tests"
