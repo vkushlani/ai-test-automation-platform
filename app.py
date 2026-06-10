@@ -40,11 +40,19 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("AI-Powered QA Agent Platform")
+st.title(
+    "🧠🤖🔧 AI Testing & Automation Assistant"
+)
 
 st.caption(
-    "AI-powered Testing & Automation Assistant for test design, Selenium framework generation, defect analysis, traceability, regression risk assessment, document intelligence, and QA planning."
+    "Generate • Analyze • Automate"
 )
+
+# st.title("AI-Powered QA Agent Platform")
+
+# st.caption(
+#     "AI-powered Testing & Automation Assistant for test design, Selenium framework generation, defect analysis, traceability, regression risk assessment, document intelligence, and QA planning."
+# )
 
 with st.expander("🚀 Platform Capabilities", expanded=True):
     st.markdown("""
@@ -628,7 +636,8 @@ if (
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             key="download_manual_test_cases_excel"
         )
-        
+
+    
 # =====================================================
 # FOOTER
 # =====================================================
