@@ -2,6 +2,8 @@ import os
 from tavily import TavilyClient
 import zipfile
 import json
+import pandas as pd
+import re
 
 
 def web_search(query):
@@ -96,30 +98,6 @@ def save_automation_framework(framework_content):
 
     return file_path
 
-#Generate Separate Selenium+Cucumber files
-# def save_framework_files(files_dict):
-
-#     folder = "exports/generated_framework"
-#     os.makedirs(folder, exist_ok=True)
-
-#     for file_path, content in files_dict.items():
-
-#         full_path = os.path.join(folder, file_path)
-#         os.makedirs(os.path.dirname(full_path), exist_ok=True)
-
-#         with open(full_path, "w", encoding="utf-8") as f:
-#             f.write(content)
-
-#     zip_path = "exports/generated_framework.zip"
-
-#     with zipfile.ZipFile(zip_path, "w") as zipf:
-#         for root, dirs, files in os.walk(folder):
-#             for file in files:
-#                 full_file = os.path.join(root, file)
-#                 arcname = os.path.relpath(full_file, folder)
-#                 zipf.write(full_file, arcname)
-
-#     return zip_path
 
 def save_framework_files_from_json(ai_response):
 
@@ -291,3 +269,51 @@ Click Login ............ PASS
 
 OVERALL RESULT: PASS
 """
+
+# =====================================
+# SAVE TEST CASES  AS CSV/EXCEL
+# =====================================
+
+def save_test_cases_as_csv_excel(test_case_text):
+
+    folder = "exports"
+    os.makedirs(folder, exist_ok=True)
+
+    csv_path = os.path.join(folder, "generated_manual_test_cases.csv")
+    excel_path = os.path.join(folder, "generated_manual_test_cases.xlsx")
+
+    rows = []
+
+    # Simple parser: splits by Test Case ID / TC patterns
+    test_blocks = re.split(
+        r"(?=TC\d+|Test Case ID|Test Case)",
+        test_case_text,
+        flags=re.IGNORECASE
+    )
+
+    for index, block in enumerate(test_blocks):
+
+        block = block.strip()
+
+        if not block:
+            continue
+
+        rows.append({
+            "Test Case ID": f"TC{index:03}",
+            "Test Case Details": block
+        })
+
+    if not rows:
+
+        rows.append({
+            "Test Case ID": "TC001",
+            "Test Case Details": test_case_text
+        })
+
+    df = pd.DataFrame(rows)
+
+    df.to_csv(csv_path, index=False)
+
+    df.to_excel(excel_path, index=False)
+
+    return csv_path, excel_path

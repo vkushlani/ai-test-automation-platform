@@ -113,6 +113,12 @@ if "uploaded_file_names" not in st.session_state:
 
 if "uploaded_file_contents" not in st.session_state:
     st.session_state.uploaded_file_contents = {}
+    
+if "test_cases_csv_path" not in st.session_state:
+    st.session_state.test_cases_csv_path = None
+
+if "test_cases_excel_path" not in st.session_state:
+    st.session_state.test_cases_excel_path = None
 
 past_memories = load_memories()
 DEBUG_MODE = False
@@ -231,7 +237,10 @@ if question:
         with st.spinner("Thinking..."):
 
             query_type = classify_question(question)
-
+            if query_type != "test_case":
+                st.session_state.test_cases_csv_path = None
+                st.session_state.test_cases_excel_path = None
+    
             if query_type != "automation_framework":
                 st.session_state.framework_zip_path = None
 
@@ -482,6 +491,15 @@ Question:
                         context=master_context,
                         question=question
                     )
+                    if query_type == "test_case":
+
+                        st.session_state.test_cases_csv_path = (
+                        "exports/generated_manual_test_cases.csv"
+                    )
+
+                        st.session_state.test_cases_excel_path = (
+                        "exports/generated_manual_test_cases.xlsx"
+                    )
 
                     if query_type == "automation_framework":
                         st.session_state.framework_zip_path = (
@@ -577,6 +595,40 @@ if (
             key="download_framework_zip"
         )
 
+# =====================================================
+# DOWNLOAD GENERATED MANUAL TEST CASES
+# =====================================================
+
+if (
+    st.session_state.test_cases_csv_path
+    and os.path.exists(st.session_state.test_cases_csv_path)
+):
+
+    with open(st.session_state.test_cases_csv_path, "rb") as csv_file:
+
+        st.download_button(
+            label="⬇️ Download Manual Test Cases CSV",
+            data=csv_file,
+            file_name="generated_manual_test_cases.csv",
+            mime="text/csv",
+            key="download_manual_test_cases_csv"
+        )
+
+if (
+    st.session_state.test_cases_excel_path
+    and os.path.exists(st.session_state.test_cases_excel_path)
+):
+
+    with open(st.session_state.test_cases_excel_path, "rb") as excel_file:
+
+        st.download_button(
+            label="⬇️ Download Manual Test Cases Excel",
+            data=excel_file,
+            file_name="generated_manual_test_cases.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key="download_manual_test_cases_excel"
+        )
+        
 # =====================================================
 # FOOTER
 # =====================================================

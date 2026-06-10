@@ -12,7 +12,8 @@ from tools import (
     save_defect_report,
     save_regression_report,
     run_mock_login_test,
-    save_framework_files_from_json
+    save_framework_files_from_json,
+    save_test_cases_as_csv_excel
 )
 
 # =====================================================
@@ -68,6 +69,7 @@ Question:
     response = llm.invoke(prompt)
 
     save_test_cases(response.content)
+    save_test_cases_as_csv_excel(response.content)
 
     return response.content
 
