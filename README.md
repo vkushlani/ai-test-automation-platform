@@ -81,6 +81,17 @@ AI Response
 
 ## Supported AI Agents
 
+### Automation Framework Agent
+
+Generates:
+
+* Selenium Framework Structure
+* Cucumber Feature Files
+* Page Objects
+* Step Definitions
+* TestNG Runners
+* Maven Configuration
+
 ### Test Case Agent
 
 Generates:
@@ -114,17 +125,6 @@ Identifies:
 * High-Risk Areas
 * Impacted Modules
 * Regression Scope
-
-### Automation Framework Agent
-
-Generates:
-
-* Selenium Framework Structure
-* Cucumber Feature Files
-* Page Objects
-* Step Definitions
-* TestNG Runners
-* Maven Configuration
 
 ### Planning Agent
 
