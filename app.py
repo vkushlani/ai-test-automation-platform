@@ -1,8 +1,9 @@
+import os
 import time
 from pathlib import Path
-import os
-import streamlit as st
+
 import pandas as pd
+import streamlit as st
 from dotenv import load_dotenv
 from pypdf import PdfReader
 from docx import Document as DocxDocument
@@ -15,7 +16,7 @@ try:
         os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 except Exception:
     pass
-    
+
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
@@ -31,13 +32,6 @@ from app_memory_manager import (
 )
 
 # =====================================================
-# ENVIRONMENT
-# =====================================================
-
-# env_path = Path(__file__).with_name(".env")
-# load_dotenv(dotenv_path=env_path)
-
-# =====================================================
 # PAGE CONFIG
 # =====================================================
 
@@ -49,24 +43,51 @@ st.set_page_config(
 st.title("AI-Powered QA Agent Platform")
 
 st.caption(
-    "AI assistant for test design, defect analysis, traceability, regression risk assessment, document analysis, and QA planning."
+    "AI-powered Testing & Automation Assistant for test design, Selenium framework generation, defect analysis, traceability, regression risk assessment, document intelligence, and QA planning."
 )
 
-st.markdown("""
-This app demonstrates an AI assistant for software testing.
+with st.expander("🚀 Platform Capabilities", expanded=True):
+    st.markdown("""
+### 🤖 AI Testing & Automation Agents
 
-You can use it to:
+✅ AI-Powered Test Case Generation  
+✅ Selenium + Cucumber + TestNG Framework Generation  
+✅ Automation Framework Design (POM)  
+✅ Defect & Root Cause Analysis  
+✅ Requirement Traceability Support  
+✅ Regression Risk Assessment  
+✅ Test Coverage Analysis  
 
-- Generate test cases from requirements
-- Analyze defects and root causes
-- Create requirement traceability ideas
-- Identify regression risks
-- Run mock automation checks
+---
 
-You may ask questions directly, or optionally upload documents such as:
-release notes, requirements, defect reports, test plans, or user stories.
+### 📄 Document Intelligence
+
+📄 Summarize Uploaded Documents  
+📄 Compare Multiple Documents  
+📄 Analyze Release Notes  
+📄 Generate Tests from Requirements & User Stories  
+
+---
+
+### 🛠 Automation Engineering
+
+⚙️ Generate Feature Files  
+⚙️ Generate Step Definitions  
+⚙️ Generate Page Objects  
+⚙️ Generate Maven Project Structure  
+⚙️ Download Automation Framework ZIP  
+
+---
+
+### 🚀 Advanced AI Features
+
+🧠 Persistent Memory  
+🔎 RAG Search  
+🌐 Live Web Search  
+🤖 Multi-Agent Architecture  
+📂 Multi-Document Analysis  
+💬 Conversational QA Assistant  
 """)
-
 
 # =====================================================
 # LLM
@@ -84,6 +105,9 @@ llm = ChatOpenAI(
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
+if "framework_zip_path" not in st.session_state:
+    st.session_state.framework_zip_path = None
+
 if "uploaded_file_names" not in st.session_state:
     st.session_state.uploaded_file_names = []
 
@@ -91,7 +115,6 @@ if "uploaded_file_contents" not in st.session_state:
     st.session_state.uploaded_file_contents = {}
 
 past_memories = load_memories()
-
 DEBUG_MODE = False
 
 # =====================================================
@@ -99,13 +122,12 @@ DEBUG_MODE = False
 # =====================================================
 
 def extract_file_content(uploaded_file):
-
     file_name = uploaded_file.name.lower()
 
     if file_name.endswith(".txt"):
         return uploaded_file.read().decode("utf-8", errors="ignore")
 
-    elif file_name.endswith(".pdf"):
+    if file_name.endswith(".pdf"):
         pdf_reader = PdfReader(uploaded_file)
         text = ""
 
@@ -116,7 +138,7 @@ def extract_file_content(uploaded_file):
 
         return text
 
-    elif file_name.endswith(".docx"):
+    if file_name.endswith(".docx"):
         doc = DocxDocument(uploaded_file)
         text = ""
 
@@ -125,11 +147,21 @@ def extract_file_content(uploaded_file):
 
         return text
 
-    elif file_name.endswith(".csv"):
-        df = pd.read_csv(uploaded_file)
-        return df.to_string(index=False)
+    if file_name.endswith(".csv"):
+        encodings = ["utf-8", "cp1252", "latin-1", "ISO-8859-1"]
 
-    elif file_name.endswith(".xlsx"):
+        for encoding in encodings:
+            try:
+                uploaded_file.seek(0)
+                df = pd.read_csv(uploaded_file, encoding=encoding)
+                return df.to_string(index=False)
+            except Exception:
+                continue
+
+        return "Unable to read CSV file."
+
+    if file_name.endswith(".xlsx"):
+        uploaded_file.seek(0)
         df = pd.read_excel(uploaded_file)
         return df.to_string(index=False)
 
@@ -146,27 +178,23 @@ uploaded_files = st.file_uploader(
     help="Optional: attach QA documents such as requirements, release notes, defect reports, test plans, CSV, Excel, Word, or PDF files."
 )
 
-
 if uploaded_files:
-
     st.session_state.uploaded_file_names = []
     st.session_state.uploaded_file_contents = {}
 
     for uploaded_file in uploaded_files:
-
         file_name = uploaded_file.name
         file_content = extract_file_content(uploaded_file)
 
         st.session_state.uploaded_file_names.append(file_name)
         st.session_state.uploaded_file_contents[file_name] = file_content
 
-    uploaded_names = ", ".join(
-        st.session_state.uploaded_file_names
-    )
+    uploaded_names = ", ".join(st.session_state.uploaded_file_names)
 
     st.success(
         f"✅ {len(st.session_state.uploaded_file_names)} document(s) uploaded: {uploaded_names}"
     )
+
 # =====================================================
 # CHAT INPUT
 # =====================================================
@@ -180,17 +208,11 @@ question = st.chat_input("Ask the AI Testing Agent...")
 st.subheader("Conversation")
 
 for message in st.session_state.chat_history:
-
     if isinstance(message, dict):
-
         with st.chat_message(message.get("role", "assistant")):
-
             st.write(message.get("content", ""))
 
-            if (
-                message.get("role") == "assistant"
-                and "response_time" in message
-            ):
+            if message.get("role") == "assistant" and "response_time" in message:
                 st.caption(
                     f"⏱️ Response generated in {message['response_time']:.2f} seconds"
                 )
@@ -200,44 +222,56 @@ for message in st.session_state.chat_history:
 # =====================================================
 
 if question:
-
     start_time = time.time()
 
-    # Show current user message immediately in this run
     with st.chat_message("user"):
         st.write(question)
 
     with st.chat_message("assistant"):
-
         with st.spinner("Thinking..."):
 
             query_type = classify_question(question)
+
+            if query_type != "automation_framework":
+                st.session_state.framework_zip_path = None
 
             document_required_workflows = [
                 "comparison",
                 "summary",
                 "document_count",
                 "document_names",
+                "automation_framework",
             ]
 
-            if (
-                query_type in document_required_workflows
-                and
-                not st.session_state.uploaded_file_names
-            ):
+            has_uploaded_docs = bool(st.session_state.uploaded_file_names)
 
-                answer = (
-                    "This request requires uploaded documents. "
-                    "Please upload release notes, requirements, defect reports, "
-                    "test plans, or similar QA documents."
+            has_chat_context = any(
+                isinstance(msg, dict)
+                and msg.get("role") == "assistant"
+                and (
+                    "test case" in msg.get("content", "").lower()
+                    or "scenario" in msg.get("content", "").lower()
+                    or "expected result" in msg.get("content", "").lower()
                 )
+                for msg in st.session_state.chat_history
+            )
 
-            else:
+            can_continue = True
+            answer = ""
 
-                # =================================================
-                # INITIALIZE VARIABLES
-                # =================================================
+            if query_type in document_required_workflows and not has_uploaded_docs:
+                if query_type == "automation_framework" and has_chat_context:
+                    can_continue = True
+                else:
+                    answer = (
+                        "This request requires uploaded documents or previous manual test cases. "
+                        "Please upload manual test cases, requirements, or user stories, "
+                        "or first generate manual test cases, then ask me to convert them into "
+                        "a Selenium Cucumber TestNG automation framework."
+                    )
+                    can_continue = False
 
+            if can_continue:
                 all_documents = []
                 uploaded_document_names = []
                 combined_content = ""
@@ -253,14 +287,9 @@ if question:
                     ]
                 )
 
-                # =================================================
-                # READ DOCUMENTS FROM SESSION STATE
-                # =================================================
-
+                # Read uploaded documents
                 if st.session_state.uploaded_file_contents:
-
                     for filename, content in st.session_state.uploaded_file_contents.items():
-
                         uploaded_document_names.append(filename)
 
                         combined_content += f"""
@@ -280,39 +309,32 @@ DOCUMENT CONTENT:
                             )
                         )
 
-                    unique_documents = list(
-                        set(uploaded_document_names)
-                    )
+                    unique_documents = list(set(uploaded_document_names))
 
-                # =================================================
-                # MEMORY RETRIEVAL
-                # Disable memory for document metadata workflows
-                # =================================================
-
+                # Disable memory when uploaded docs are present
                 if query_type in [
                     "document_count",
                     "document_names",
                     "comparison",
                     "summary",
+                    "automation_framework",
                 ]:
                     memory_results = []
                 else:
-                    memory_results = retrieve_memory(question)
+                    if st.session_state.uploaded_file_names:
+                        memory_results = []
+                    else:
+                        memory_results = retrieve_memory(question)
 
                 for memory in memory_results:
-
                     memory_context += f"""
 
 {memory.page_content}
 
 """
 
-                # =================================================
-                # RAG ONLY IF DOCUMENTS EXIST
-                # =================================================
-
+                # RAG search only if uploaded documents exist
                 if all_documents:
-
                     splitter = RecursiveCharacterTextSplitter(
                         chunk_size=500,
                         chunk_overlap=80
@@ -334,7 +356,6 @@ DOCUMENT CONTENT:
                     )
 
                     for r in results:
-
                         source = r.metadata.get("source", "Unknown")
 
                         retrieved_context += f"""
@@ -347,14 +368,26 @@ CONTENT:
 
 """
 
-                # =================================================
-                # MASTER CONTEXT
-                # =================================================
-
-                master_context = f"""
+                # Master context
+                if st.session_state.uploaded_file_names:
+                    master_context = f"""
 
 Uploaded Documents:
 {unique_documents}
+
+Retrieved Context:
+{retrieved_context}
+
+Document Content:
+{combined_content}
+
+IMPORTANT:
+Use ONLY the uploaded document content.
+Ignore previous conversation history.
+Ignore historical memory unless explicitly requested.
+"""
+                else:
+                    master_context = f"""
 
 Conversation History:
 {history}
@@ -365,17 +398,12 @@ Historical Memory:
 Retrieved Context:
 {retrieved_context}
 
-Document Content:
-{combined_content}
-
+Question:
+{question}
 """
 
-                # =================================================
-                # DOCUMENT COUNT
-                # =================================================
-
+                # Document count
                 if query_type == "document_count":
-
                     answer = f"""
 Total uploaded documents: {len(unique_documents)}
 
@@ -384,24 +412,16 @@ Document names:
 {chr(10).join(unique_documents)}
 """
 
-                # =================================================
-                # DOCUMENT NAMES
-                # =================================================
-
+                # Document names
                 elif query_type == "document_names":
-
                     answer = f"""
 Uploaded document name(s):
 
 {chr(10).join(unique_documents)}
 """
 
-                # =================================================
-                # SUMMARY
-                # =================================================
-
+                # Summary
                 elif query_type == "summary":
-
                     prompt = f"""
 You are a document summarization expert.
 
@@ -417,12 +437,8 @@ Document Content:
                     response = llm.invoke(prompt)
                     answer = response.content
 
-                # =================================================
-                # COMPARISON
-                # =================================================
-
+                # Comparison
                 elif query_type == "comparison":
-
                     prompt = f"""
 You are a document comparison expert.
 
@@ -447,10 +463,7 @@ Question:
                     response = llm.invoke(prompt)
                     answer = response.content
 
-                # =================================================
-                # MULTI-AGENT WORKFLOWS
-                # =================================================
-
+                # Multi-agent workflows
                 elif query_type in [
                     "test_case",
                     "defect_analysis",
@@ -458,36 +471,30 @@ Question:
                     "regression_risk",
                     "coverage_pipeline",
                     "automation",
+                    "automation_framework",
                     "website_testing",
                     "planning",
                     "release_readiness",
-                     "web_search",
+                    "web_search",
                 ]:
-
                     answer = coordinator_agent(
                         query_type=query_type,
                         context=master_context,
                         question=question
                     )
 
-                # =================================================
-                # DEFAULT GENERAL QA / RAG WORKFLOW
-                # =================================================
+                    if query_type == "automation_framework":
+                        st.session_state.framework_zip_path = (
+                            "exports/generated_selenium_cucumber_framework.zip"
+                        )
 
+                # Default QA / RAG workflow
                 else:
-
                     if retrieved_context:
-
                         prompt = f"""
 You are a Senior QA AI Assistant.
 
 Use uploaded documents if relevant.
-
-Conversation History:
-{history}
-
-Historical Memory:
-{memory_context}
 
 Retrieved Context:
 {retrieved_context}
@@ -495,14 +502,11 @@ Retrieved Context:
 Question:
 {question}
 """
-
                     else:
-
                         prompt = f"""
 You are a friendly AI QA Assistant.
 
 If the user is chatting casually, respond naturally.
-
 If the user asks QA or software testing questions, answer using your QA knowledge.
 
 Conversation History:
@@ -518,26 +522,14 @@ Question:
                     response = llm.invoke(prompt)
                     answer = response.content
 
-            # =================================================
-            # RESPONSE TIME
-            # =================================================
-
             end_time = time.time()
             response_time = end_time - start_time
-
-            # =================================================
-            # DISPLAY ANSWER
-            # =================================================
 
             st.write(answer)
 
             st.caption(
                 f"⏱️ Response generated in {response_time:.2f} seconds"
             )
-
-            # =================================================
-            # SAVE CHAT HISTORY
-            # =================================================
 
             st.session_state.chat_history.append(
                 {
@@ -554,28 +546,36 @@ Question:
                 }
             )
 
-            # =================================================
-            # SAVE MEMORY
-            # =================================================
-
             save_memory(question, answer)
 
             save_memory_to_vector_db(question, answer)
 
-            # =================================================
-            # DEBUG SECTIONS
-            # =================================================
-
             if DEBUG_MODE:
-
                 with st.expander("Retrieved Document Context"):
-                    st.text(retrieved_context)
+                    st.text(retrieved_context if "retrieved_context" in locals() else "")
 
                 with st.expander("Retrieved Memory Context"):
-                    st.text(memory_context)
+                    st.text(memory_context if "memory_context" in locals() else "")
 
                 with st.expander("Persistent Memory Store"):
                     st.write(past_memories)
+
+# =====================================================
+# DOWNLOAD GENERATED FRAMEWORK
+# =====================================================
+
+if (
+    st.session_state.framework_zip_path
+    and os.path.exists(st.session_state.framework_zip_path)
+):
+    with open(st.session_state.framework_zip_path, "rb") as zip_file:
+        st.download_button(
+            label="⬇️ Download Selenium Cucumber Framework ZIP",
+            data=zip_file,
+            file_name="generated_selenium_cucumber_framework.zip",
+            mime="application/zip",
+            key="download_framework_zip"
+        )
 
 # =====================================================
 # FOOTER
@@ -584,5 +584,10 @@ Question:
 st.markdown("---")
 
 st.caption(
-    "Built with Streamlit, LangChain, OpenAI, ChromaDB, and multi-agent QA architecture."
+    """
+   <b>Built by Vikas Kushlani</b><br>
+   
+    Streamlit • LangChain • OpenAI • ChromaDB • Multi-Agent AI
+    """,
+    unsafe_allow_html=True
 )

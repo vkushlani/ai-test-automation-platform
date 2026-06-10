@@ -19,6 +19,20 @@ def classify_question(question):
     "how many document"
 ]):
         return "document_count"
+    elif any(word in question for word in [
+    "selenium framework",
+    "cucumber framework",
+    "automation framework",
+    "generate automation framework",
+    "manual test cases to automation",
+    "convert manual test cases",
+    "selenium cucumber",
+    "testng framework",
+    "generate selenium",
+    "generate cucumber",
+    "selenium cucumber testng"
+]):
+        return "automation_framework"
     
     elif any(word in question for word in [
     "test case",
@@ -54,6 +68,16 @@ def classify_question(question):
 
 ]):
         return "website_testing"
+    
+   
+    
+    elif any(word in question for word in [
+        "run test"
+        ,"execute test",
+        "automation",
+        "test execution"
+    ]):
+        return "automation"
     
     elif any(word in question for word in [
 
@@ -110,12 +134,7 @@ def classify_question(question):
 ]):
         return "web_search"
 
-    elif any(word in question for word in [
-        "run test"
-        ,"execute test",
-        "test execution"
-    ]):
-        return "automation"
+    
     
     elif any(word in question for word in [
     "name of uploaded document",
